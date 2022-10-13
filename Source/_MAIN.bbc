@@ -1,0 +1,267 @@
+   10REM MODE 1
+   20REM HIMEM=&2D60
+   30REM *LOAD OBJASM2 2D60
+   40REM *LOAD OBJASM1 900
+   50REM $&2FF8="A"
+   60LV%=?&2FFF:VDU 19,1,2,0;0:VDU 19,2,6,0;0:VDU 19,3,5,0;0:VDU 23,1,0;0;0;0,0:Xdim%=10:Ydim%=8:DIM Grid%(Ydim%-1,Xdim%-1):DIM Touching%(12):Grid_xpos%=1:Grid_ypos%=14
+   70MC%=&2D60
+   80*FX 4,1
+   90VDU 28,0,29,39,14
+  100DIM Falling%(Ydim%-1,Xdim%-1):Solution$=STRING$(80,"*"):Solution$="":Level$=STRING$(130,"*"):Level$="":TI$=STRING$(21,"*"):TI$="":TL$=STRING$(21,"*"):TL$=""
+  110OP%=0
+  120VDU 28,21,29,38,14
+  130REPEAT
+  140PROCRL
+  145PROCC
+  150PROCInit
+  160PROCMain
+  180LV%=LV%+1
+  190UNTILLV%=59
+  191LV%=0
+  192GOTO 130
+  200END
+  210DEFPROCInit:FOR I%=0 TO Ydim%-1:FOR J%=0 TO Xdim%-1:Falling%(I%,J%)=FALSE:NEXT,
+  220MO%=0
+  230PROCSetup_grid
+  240PROCDraw_grid(2,0,3,0)
+  250COLOUR1:COLOUR128
+  260PRINTTAB(0,0);STRING$(18," ");TAB(0,0);TL$;
+  270PRINTTAB(0,2);STRING$(18," ");TAB(0,2);TI$;
+  280PRINTTAB(0,4);STRING$(18," ");TAB(0,4);"Level ";:COLOUR2:PRINT;LV%+1;"/59";
+  290GCOL 0,3
+  300MOVE 0,588:DRAW 0,48:DRAW 1279,48:DRAW 1279,588:DRAW 0,588
+  310MOVE 664,64:PLOT 17,0,508
+  320COLOUR3:PRINTTAB(9,10)"Par ";:COLOUR2:PRINT;LEN(Solution$) DIV 2;" ";
+  330COLOUR3:PRINTTAB(0,10)"Moves ";:COLOUR2:PRINT;MO%;" ";
+  340COLOUR3 : PRINTTAB(0,8)"Blocks left  ";:COLOUR2:PRINT;B%;" ";
+  341COLOUR1:PRINTTAB(0,15)"QUIT  RESET  SHOW";:COLOUR3:PRINTTAB(1,15)"uit";TAB(7,15)"eset";TAB(14,15)"how";
+  350ENDPROC
+  360DEFPROCC
+  370GCOL 0,0
+  380x%=640
+  390REPEAT
+  400MOVE 16+x%,64:DRAW 16+x%,576
+  401MOVE 652-x%,64:DRAW 652-x%,576
+  410x%=x%-4
+  420UNTILx%=316
+  470ENDPROC
+  480:
+  490DEF PROCSetup_grid
+  500P%=0:R%=0:C%=0:A$="":B%=0
+  510REPEAT
+  520V%=VAL( RIGHT$( Level$, LEN(Level$)-P% ) )
+  530IF V%>0 FOR I%=1 TO V%:Grid%(R%,C%)=0:C%=C%+1:NEXT:A$=""
+  540IF V%>9 P%=P%+2 ELSE IF V%>0:IF V%<10 P%=P%+1
+  550IF V%=0 A$=MID$(Level$,P%+1,1) ELSE GOTO 600
+  560IF A$="/" P%=P%+1
+  570IF A$="~" Grid%(R%,C%)=9:C%=C%+1:P%=P%+1
+  580IF A$<>"":IF A$<>"/":IF A$<>"~" Grid%(R%,C%)=ASC(A$)-96:C%=C%+1:P%=P%+1:B%=B%+1
+  590IF C%>=Xdim% C%=0:R%=R%+1
+  600UNTIL R%=Ydim%
+  610ENDPROC
+  620:
+  630DEFPROCDraw_grid(C%,D%,E%,F%)
+  640LOCAL I%
+  650FOR I%=0 TO Ydim%-1
+  660FOR J%=0 TO Xdim%-1
+  670?&70=Grid%(I%,J%)
+  680?&71=Grid_xpos%+J%*4 : ?&72=Grid_ypos%+I%*2
+  690IF ?&70=0 ?&73=C%:?&74=D%:CALL MC%:GOTO 720
+  700IF ?&70>0:IF ?&70<9 ?&73=(?&70 MOD 3)+1:?&74=F%:CALL MC%:GOTO 720
+  710?&73=0:CALL MC%
+  720NEXT,
+  730ENDPROC
+  740:
+  750DEFPROCMain
+  760C%=0:R%=0:E%=FALSE:Q%=0
+  770?&71=Grid_xpos%+(4*C%):?&72=Grid_ypos%+(2*R%)
+  780?&70=Grid%(R%,C%)
+  790Selected%=FALSE
+  800PROCDraw_cursor
+  810REPEAT
+  820IF E%=TRUE THEN PROCDo_gravity
+  830IF Q%>0 THEN PROCDo_explode : E%=TRUE : ?&70=9 : Q%=0 : COLOUR3 : PRINTTAB(0,8)"Blocks left  ";:COLOUR2:PRINT;B%;" "; : GOTO 820
+  840E%=FALSE
+  850IF B%=0 GOTO 1030
+  860PROCDraw_cursor
+  870*FX 15,1
+  880K%=GET
+  890PROCClear_cursor
+  900IF K%=88:IF C%<9 THEN PROCMR
+  910IF K%=90:IF C%>0 THEN PROCML
+  920IF Selected%=TRUE GOTO 950
+  930IF K%=58:IF R%>0 R%=R%-1:GOTO 1000
+  940IF K%=47:IF R%<7 R%=R%+1:GOTO 1000
+  950IF K%=13:IF ?&70>0:IF ?&70<9:IF Selected%=FALSE Selected%=TRUE:GOTO 970
+  960IF K%=13:IF ?&70>0:IF ?&70<9:IF Selected%=TRUE Selected%=FALSE
+  970IF K%=82 PROCInit:C%=0:R%=0:Selected%=FALSE
+  980IF K%=83 PROCPlay_Solution:C%=0:R%=0:GOTO 1030
+  990IF K%=81 PROCQuit
+ 1000?&70=Grid%(R%,C%)
+ 1010?&71=Grid_xpos%+(4*C%):?&72=Grid_ypos%+(2*R%)
+ 1020PROCDraw_cursor
+ 1030UNTILB%=0
+ 1050ENDPROC
+ 1060:
+ 1070DEFPROCMR
+ 1080IF Selected%=FALSE C%=C%+1:ENDPROC
+ 1090?&74=((?&70+1) MOD 3)+1
+ 1100IF Grid%(R%,C%+1)<>9 ENDPROC
+ 1110Grid%(R%,C%+1)=Grid%(R%,C%):Grid%(R%,C%)=9:C%=C%+1:PROCAMR:E%=TRUE:IF Grid%(R%+1,C%)<>9 PROCCheck_touching(R%,C%)
+ 1120ENDPROC
+ 1130DEFPROCAMR
+ 1140REM ?&73=0:CALL MC%
+ 1150D%=3
+ 1160REPEAT
+ 1170?&73=0:CALL MC%:?&71=?&71+1:?&73=(?&70 MOD 3)+1:CALL MC%:PROCWait(5)
+ 1180D%=D%-1
+ 1190UNTILD%=0
+ 1200MO%=MO%+1:COLOUR3:PRINTTAB(0,10)"Moves ";:COLOUR2:PRINT;MO%;" ";
+ 1205?&73=0:CALL MC%
+ 1210ENDPROC
+ 1220:
+ 1230DEFPROCML
+ 1240IF Selected%=FALSE C%=C%-1:ENDPROC
+ 1250?&74=((?&70+1) MOD 3)+1
+ 1260IF Grid%(R%,C%-1)<>9 ENDPROC
+ 1270Grid%(R%,C%-1)=Grid%(R%,C%):Grid%(R%,C%)=9:C%=C%-1:PROCAML:E%=TRUE:IF Grid%(R%+1,C%)<>9 PROCCheck_touching(R%,C%)
+ 1280ENDPROC
+ 1290:
+ 1300DEFPROCAML
+ 1310REM ?&73=0:CALL MC%
+ 1320D%=3
+ 1330REPEAT
+ 1340?&73=0:CALL MC%:?&71=?&71-1:?&73=(?&70 MOD 3)+1:CALL MC%:PROCWait(5)
+ 1350D%=D%-1
+ 1360UNTILD%=0
+ 1370MO%=MO%+1:COLOUR3:PRINTTAB(0,10)"Moves ";:COLOUR2:PRINT;MO%;" ";
+ 1375?&73=0:CALL MC%
+ 1380ENDPROC
+ 1390DEFPROCDraw_cursor
+ 1400IF Selected%=TRUE ?&73=(?&70 MOD 3)+1:?&74=((?&70+1) MOD 3)+1:GOTO 1420
+ 1410IF ?&70=0 OR ?&70=9 THEN ?&73=3:?&74=0 ELSE ?&73=((?&70+1) MOD 3)+1:?&74=0
+ 1420CALL MC%
+ 1430ENDPROC
+ 1440:
+ 1450DEFPROCClear_cursor
+ 1460?&73=(?&70 MOD 3)+1:?&74=0
+ 1470IF ?&70=0 ?&73=2
+ 1480IF ?&70=9 ?&73=0
+ 1490CALL MC%
+ 1500ENDPROC
+ 1510:
+ 1520:
+ 1530DEFPROCDo_gravity
+ 1540REPEAT
+ 1550Z%=FALSE
+ 1560TIME=0
+ 1570FOR I%=6 TO 1 STEP -1
+ 1580FOR J%=1 TO 8
+ 1590K%=Grid%(I%,J%)
+ 1600IF K%=0 OR K%=9 GOTO 1650
+ 1610M%=Grid%(I%+1,J%)
+ 1620IF M%=9 PROCAct_gravity : Z%=TRUE
+ 1630?&70=Grid%(R%,C%) : IF ?&70=9 Selected%=FALSE
+ 1640IF Falling%(I%,J%) = TRUE PROCCheck_touching(I%,J%):Falling%(I%,J%) = FALSE
+ 1650NEXT,
+ 1660UNTIL Z%=FALSE
+ 1670ENDPROC
+ 1680:
+ 1690DEFPROCAct_gravity
+ 1700X%=?&71:Y%=?&72
+ 1710?&71=Grid_xpos%+(4*J%) : ?&72=Grid_ypos%+(2*I%)
+ 1720?&70=Grid%(I%,J%)
+ 1730REPEATUNTILTIME>15
+ 1740?&74=0
+ 1750REM CLEAR ITEM
+ 1760?&73=0
+ 1770CALL MC%
+ 1780REM DROP 1/2 STEP
+ 1790?&73=(?&70 MOD 3)+1:?&72=?&72+1
+ 1800CALL MC%
+ 1810PROCWait(15)
+ 1820REM CLEAR ITEM
+ 1830?&73=0
+ 1840CALL MC%
+ 1850REM DROP 1 FULL STEP
+ 1860?&73=(?&70 MOD 3)+1:?&72=?&72+1
+ 1870CALL MC%
+ 1880Grid%(I%,J%)=9 : Grid%(I%+1,J%)=?&70
+ 1890Falling%(I%,J%)=FALSE : Falling%(I%+1,J%)=TRUE
+ 1900?&71=X%:?&72=Y%
+ 1910ENDPROC
+ 1920:
+ 1930DEFPROCWait(time%)
+ 1940TIME=0
+ 1950REPEATUNTILTIME>time%
+ 1960ENDPROC
+ 1970:
+ 1980DEFPROCCheck_touching(y%,x%)
+ 1990LOCAL R%
+ 2000G%=Grid%(y%,x%) : F%=Grid%(y%,x%-1) : H%=Grid%(y%,x%+1) : Y%=Grid%(y%+1,x%)
+ 2010R%=Q%
+ 2020IF G%=F% Touching%(Q%)=(10*y%)+(x%-1) : Q%=Q%+1
+ 2030IF G%=H% Touching%(Q%)=(10*y%)+(x%+1) : Q%=Q%+1
+ 2040IF G%=Y% Touching%(Q%)=(10*(y%+1))+x% : Q%=Q%+1
+ 2050IF R%<>Q% Touching%(Q%)=(10*y%)+x% : Q%=Q%+1 : Selected%=FALSE
+ 2060ENDPROC
+ 2070:
+ 2080DEFPROCDo_explode
+ 2090FOR L%=(Q%-1) TO 0 STEP -1
+ 2100GCOL 0,0
+ 2110y%=Touching%(L%) DIV 10 : x%=Touching%(L%) MOD 10
+ 2120Grid%(y%,x%)=9
+ 2130X%=((Grid_xpos%/2)+(x%*2))*32 : Y%=1023-(Grid_ypos%+(2*y%))*32
+ 2140FOR W%=0 TO 32 STEP 4
+ 2150MOVE X%+(32-W%),Y%-(32-W%)
+ 2160DRAW X%+(32-W%),Y%-(28+W%)
+ 2170DRAW X%+(28+W%),Y%-(28+W%)
+ 2180DRAW X%+(28+W%),Y%-(32-W%)
+ 2190DRAW X%+(32-W%),Y%-(32-W%)
+ 2200NEXT
+ 2210B%=B%-1
+ 2220NEXT
+ 2230ENDPROC
+ 2240:
+ 2250DEFPROCPlay_Solution
+ 2260PROCInit : Q%=0 : E%=FALSE : N%=LEN(Solution$) : P%=1 : Selected%=FALSE
+ 2270IF E%=TRUE THEN PROCDo_gravity
+ 2280IF Q%>0 THEN PROCDo_explode : E%=TRUE : Q%=0 : GOTO 2270
+ 2290E%=FALSE
+ 2300COLOUR3:PRINTTAB(0,8)"Blocks left  ";:COLOUR2:PRINT;B%;" ";
+ 2310IF P%>N% GOTO 2450
+ 2320A$=MID$(Solution$,P%,1)
+ 2330B$=MID$(Solution$,P%+1,1)
+ 2340A%=ASC(A$):D%=ASC(B$)
+ 2350O%=FALSE
+ 2360?&74=0
+ 2370IF A%<D% THEN O%=TRUE:C%=A%-65:R%=D%-97 ELSE C%=A%-97:R%=D%-65
+ 2380?&71=Grid_xpos%+(4*C%):?&72=Grid_ypos%+(2*R%):?&70=Grid%(R%,C%)
+ 2390IF O%=TRUE Grid%(R%,C%-1)=?&70:Grid%(R%,C%)=9:PROCAML:PROCWait(5):?&73=0:CALL MC%:?&73=(?&70 MOD 3)+1:?&71=?&71-1:CALL MC%:E%=TRUE:C%=C%-1:IF Grid%(R%+1,C%)<>9 PROCCheck_touching(R%,C%)
+ 2400IF O%=FALSE Grid%(R%,C%+1)=?&70:Grid%(R%,C%)=9:PROCAMR:PROCWait(5):?&73=0:CALL MC%:?&73=(?&70 MOD 3)+1:?&71=?&71+1:CALL MC%:E%=TRUE:C%=C%+1:IF Grid%(R%+1,C%)<>9 PROCCheck_touching(R%,C%)
+ 2410IF Grid%(R%+1,C%)=0 THEN E%=TRUE
+ 2420P%=P%+2
+ 2430PROCWait(10)
+ 2440GOTO 2270
+ 2450ENDPROC
+ 2460DEFPROCRL
+ 2470FI%=OPENIN($&2FF8)
+ 2480INPUT#FI%,TL$
+ 2490IF LV%=0 OP%=PTR#FI%
+ 2500REPEAT
+ 2510IF OP%<>0 THEN PTR#FI%=OP%
+ 2520INPUT#FI%,RL%,TI$,Level$,Solution$
+ 2530OP%=PTR#FI%
+ 2540UNTIL RL%=LV%
+ 2550CLOSE#FI%
+ 2560ENDPROC
+ 2570DEFPROCQuit
+ 2580FI%=OPENOUT($&2FF8+"1")
+ 2590PRINT#FI%,LV%
+ 2600CLOSE#FI%
+ 2610CLOSE#0
+ 2620CLS
+ 2630COLOUR1
+ 2640PRINTTAB(0,6)"Your progress has been saved. Press BREAK to quit"
+ 2650REPEATUNTILFALSE
+ 2660ENDPROC

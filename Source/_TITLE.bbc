@@ -1,0 +1,7 @@
+>   10DATA "c~c/c~c/c~c/c~c/~c~","aaa/a~~/aa~/a~~/aaa","d~d/d~d/~d~/d~d/d~d","bbb/b~~/bb~/b~~/bbb","ff~/f~f/f~f/f~f/ff~"
+   20File%=OPENOUT("TITLE")
+   30FOR I%=1 TO 5
+   40READ Tile$
+   50PRINT#File%,Tile$
+   60NEXT
+   70CLOSE#File%
