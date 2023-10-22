@@ -77,20 +77,20 @@ RTS
     CMP #0
     BEQ draw
     STA colour              ;if backgound colour is not black add an second colour
-    LDA low_nibble
+    LDA low_nibble          ;save coloured low_nibble in t3
     STA t3
-    LDA high_nibble
+    LDA high_nibble         ;save coloured high_nible in t4
     STA t4
-    LDA t1
-    EOR #&FF               ;NOT
+    LDA t1                  ;load the sprite byte
+    EOR #&FF                ;NOT
     AND background_mask_1,X
-    STA t2 
-    AND #&F0
+    STA t2                  
+    AND #&F0                ;get the new high_nibble
     STA high_nibble
     LDA t2
     AND #&0F 
-    STA low_nibble
-    JSR colouring
+    STA low_nibble          ;get the new low_nibble
+    JSR colouring           ;colour the nibbles
     LDA t4
     ORA high_nibble
     STA high_nibble
@@ -473,5 +473,3 @@ EQUW &7600 : EQUW &7880 : EQUW &7B00 : EQUW &7D80
 
 SAVE "OBJMAIN", start, end
 SAVE "OBJDATA", data1, end_data
-
-PUTBASIC "TEST.BAS","TEST"
